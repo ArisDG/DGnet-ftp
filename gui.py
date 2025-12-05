@@ -778,6 +778,7 @@ class FTPSiteGUI:
             ("rate", "Rate (1s/30s)"),
             ("format", "Format"),
             ("host", "Host"),
+            ("port", "Port (default: 21 for FTP, 22 for SFTP)"),
             ("protocol", "Protocol"),
             ("user", "User"),
             ("password", "Password"),

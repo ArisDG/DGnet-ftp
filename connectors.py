@@ -10,7 +10,9 @@ class FTPConnector:
     @staticmethod
     def list_and_size(site):
         try:
-            ftp = ftplib.FTP(site.host, timeout=30)
+            port = getattr(site, "port", 21)
+            ftp = ftplib.FTP(timeout=30)
+            ftp.connect(site.host, port)
             ftp.login(site.user, site.password)
             ftp.cwd(site.path)
             files = []
@@ -41,7 +43,9 @@ class FTPConnector:
     @staticmethod
     def download(site, fname, local_path):
         try:
-            ftp = ftplib.FTP(site.host, timeout=60)
+            port = getattr(site, "port", 21)
+            ftp = ftplib.FTP(timeout=60)
+            ftp.connect(site.host, port)
             ftp.login(site.user, site.password)
             ftp.cwd(site.path)
             with open(local_path, "wb") as f:
@@ -57,7 +61,8 @@ class SFTPConnector:
     @staticmethod
     def list_and_size(site):
         try:
-            transport = Transport((site.host, 22))
+            port = getattr(site, "port", 22)
+            transport = Transport((site.host, port))
             transport.connect(username=site.user, password=site.password)
             sftp = SFTPClient.from_transport(transport)
             sftp.chdir(site.path)
@@ -74,7 +79,8 @@ class SFTPConnector:
     @staticmethod
     def download(site, fname, local_path):
         try:
-            transport = Transport((site.host, 22))
+            port = getattr(site, "port", 22)
+            transport = Transport((site.host, port))
             transport.connect(username=site.user, password=site.password)
             sftp = SFTPClient.from_transport(transport)
             remote_path = f"{site.path.rstrip('/')}/{fname}"
