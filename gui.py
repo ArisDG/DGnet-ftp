@@ -664,15 +664,13 @@ class FTPSiteGUI:
             if now >= self.next_run_time:
                 self.root.after(0, lambda: self._scan_and_download(auto=True))
                 self._schedule_next_run()
-            remaining = int((self.next_run_time - now).total_seconds())
-            if remaining > 0:
-                next_time_str = self.next_run_time.strftime("%H:%M")
-                countdown_str = self._format_countdown(remaining)
-
-                def update_status(nt=next_time_str, cd=countdown_str):
-                    self.scheduler_var.set(f"Next run: {nt} (in {cd})")
-
-                self.root.after(0, update_status)
+            else:
+                # Only update countdown if not at run time
+                remaining = int((self.next_run_time - now).total_seconds())
+                if remaining > 0:
+                    # Update status directly without creating closures
+                    status_text = f"Next run: {self.next_run_time.strftime('%H:%M')} (in {self._format_countdown(remaining)})"
+                    self.root.after(0, self.scheduler_var.set, status_text)
             time.sleep(1)
 
     def _format_countdown(self, seconds):
