@@ -1,6 +1,10 @@
 import ftplib
+import logging
 from paramiko import Transport, SFTPClient
 from models import SiteConfig
+
+logger = logging.getLogger(__name__)
+
 
 class FTPConnector:
     @staticmethod
@@ -9,25 +13,30 @@ class FTPConnector:
             ftp = ftplib.FTP(site.host, timeout=30)
             ftp.login(site.user, site.password)
             ftp.cwd(site.path)
-            files = []; sizes = {}
+            files = []
+            sizes = {}
             try:
                 for entry in ftp.mlsd():
                     name, facts = entry
-                    if 'type' in facts and facts['type'] == 'file':
+                    if "type" in facts and facts["type"] == "file":
                         files.append(name)
-                        sizes[name] = int(facts.get('size', 0))
+                        sizes[name] = int(facts.get("size", 0))
                 ftp.quit()
                 return files, sizes
-            except: pass
+            except:
+                pass
             files = ftp.nlst()
             for f in files:
                 try:
                     size = ftp.size(f)
                     sizes[f] = size if size is not None else 0
-                except: sizes[f] = 0
+                except:
+                    sizes[f] = 0
             ftp.quit()
             return files, sizes
-        except: return [], {}
+        except Exception as e:
+            logger.error(f"FTP list_and_size failed for {site.host}: {e}")
+            return [], {}
 
     @staticmethod
     def download(site, fname, local_path):
@@ -35,11 +44,14 @@ class FTPConnector:
             ftp = ftplib.FTP(site.host, timeout=60)
             ftp.login(site.user, site.password)
             ftp.cwd(site.path)
-            with open(local_path, 'wb') as f:
-                ftp.retrbinary(f'RETR {fname}', f.write)
+            with open(local_path, "wb") as f:
+                ftp.retrbinary(f"RETR {fname}", f.write)
             ftp.quit()
             return True
-        except: return False
+        except Exception as e:
+            logger.error(f"FTP download failed for {site.host}/{fname}: {e}")
+            return False
+
 
 class SFTPConnector:
     @staticmethod
@@ -55,7 +67,9 @@ class SFTPConnector:
             sftp.close()
             transport.close()
             return files, sizes
-        except: return [], {}
+        except Exception as e:
+            logger.error(f"SFTP list_and_size failed for {site.host}: {e}")
+            return [], {}
 
     @staticmethod
     def download(site, fname, local_path):
@@ -68,8 +82,12 @@ class SFTPConnector:
             sftp.close()
             transport.close()
             return True
-        except: return False
+        except Exception as e:
+            logger.error(f"SFTP download failed for {site.host}/{fname}: {e}")
+            return False
+
 
 class ConnectorFactory:
     @staticmethod
-    def get(p): return FTPConnector if p == 'ftp' else SFTPConnector
+    def get(p):
+        return FTPConnector if p == "ftp" else SFTPConnector
