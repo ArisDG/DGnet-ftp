@@ -36,6 +36,18 @@ class FTPConnector:
                     sizes[f] = 0
             ftp.quit()
             return files, sizes
+        except (ftplib.error_perm, ftplib.error_temp) as e:
+            # 550 errors are often "no files found" - not critical
+            error_msg = str(e)
+            if "550" in error_msg and (
+                "no files" in error_msg.lower() or "not found" in error_msg.lower()
+            ):
+                logger.info(
+                    f"FTP directory empty or no matching files for {site.host}:{site.path}"
+                )
+            else:
+                logger.error(f"FTP error for {site.host}: {e}")
+            return [], {}
         except Exception as e:
             logger.error(f"FTP list_and_size failed for {site.host}: {e}")
             return [], {}
@@ -60,6 +72,9 @@ class FTPConnector:
 class SFTPConnector:
     @staticmethod
     def list_and_size(site):
+        if not site.host:
+            logger.warning(f"SFTP site {site.name} has no host configured, skipping")
+            return [], {}
         try:
             port = getattr(site, "port", 22)
             transport = Transport((site.host, port))
@@ -78,6 +93,9 @@ class SFTPConnector:
 
     @staticmethod
     def download(site, fname, local_path):
+        if not site.host:
+            logger.warning(f"SFTP site {site.name} has no host configured, skipping")
+            return False
         try:
             port = getattr(site, "port", 22)
             transport = Transport((site.host, port))
