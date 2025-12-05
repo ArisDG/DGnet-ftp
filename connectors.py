@@ -63,7 +63,7 @@ class SFTPConnector:
         try:
             port = getattr(site, "port", 22)
             transport = Transport((site.host, port))
-            transport.connect(username=site.user, password=site.password)
+            transport.connect(username=site.user, password=site.password, timeout=30)
             sftp = SFTPClient.from_transport(transport)
             sftp.chdir(site.path)
             attrs = sftp.listdir_attr()
@@ -81,7 +81,7 @@ class SFTPConnector:
         try:
             port = getattr(site, "port", 22)
             transport = Transport((site.host, port))
-            transport.connect(username=site.user, password=site.password)
+            transport.connect(username=site.user, password=site.password, timeout=60)
             sftp = SFTPClient.from_transport(transport)
             remote_path = f"{site.path.rstrip('/')}/{fname}"
             sftp.get(remote_path, local_path)
