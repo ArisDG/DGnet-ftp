@@ -14,7 +14,8 @@
     "use_letter_hour": true,
     "output_dir": "./downloads/PENT",
     "station_code": "PENT",
-    "format": "Topcon"
+    "format": "Topcon",
+    "port": 21
   },
   {
     "name": "PAT10",
@@ -31,7 +32,8 @@
     "use_letter_hour": true,
     "output_dir": "./downloads/PAT10",
     "station_code": "PAT0",
-    "format": "Topcon"
+    "format": "Topcon",
+    "port": 21
   },
   {
     "name": "UPAG10",
@@ -48,7 +50,8 @@
     "use_letter_hour": false,
     "output_dir": "./downloads/UPAG-10Hz",
     "station_code": "UPAG",
-    "format": "Trimble"
+    "format": "Trimble",
+    "port": 21
   },
   {
     "name": "POP10",
@@ -65,6 +68,25 @@
     "use_letter_hour": false,
     "output_dir": "./downloads/POP10",
     "station_code": "POP",
-    "format": "Trimble"
+    "format": "Trimble",
+    "port": 21
+  },
+  {
+    "name": "RIO1",
+    "host": "0.0.0.0",
+    "protocol": "",
+    "user": "",
+    "password": "",
+    "path": "",
+    "pattern": "",
+    "frequency": "",
+    "network": "UPAT",
+    "rate": "30s",
+    "external_clock": false,
+    "use_letter_hour": false,
+    "output_dir": "./downloads/RIO1",
+    "station_code": "RIO",
+    "format": "Trimble",
+    "port": "22"
   }
 ]
