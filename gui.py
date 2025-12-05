@@ -657,8 +657,9 @@ class FTPSiteGUI:
         next_hour = (now + timedelta(hours=1)).replace(
             minute=delay, second=0, microsecond=0
         )
-        if now.hour == 23 and delay > 0:
-            next_hour += timedelta(days=1)
+        # Ensure next_run_time is always in the future
+        if next_hour <= now:
+            next_hour += timedelta(hours=1)
         self.next_run_time = next_hour
         remaining = int((self.next_run_time - now).total_seconds())
         self.scheduler_var.set(
