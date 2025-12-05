@@ -6,8 +6,6 @@ import os
 import re
 import logging
 from datetime import datetime, timedelta, timezone
-from manager import FTPSiteManager
-from models import MissingFilesLog
 
 logger = logging.getLogger(__name__)
 
@@ -785,6 +783,12 @@ class FTPSiteGUI:
         ext_clk = tk.BooleanVar(value=site.external_clock if site else False)
         letter = tk.BooleanVar(value=site.use_letter_hour if site else False)
         format_var = tk.StringVar(value=getattr(site, "format", "Topcon"))
+        protocol_var = tk.StringVar(
+            value=getattr(site, "protocol", "ftp") if site else "ftp"
+        )
+        frequency_var = tk.StringVar(
+            value=getattr(site, "frequency", "hourly") if site else "hourly"
+        )
 
         for i, (key, label) in enumerate(fields):
             if key == "format":
@@ -800,6 +804,32 @@ class FTPSiteGUI:
                 )
                 combo.grid(row=i, column=1, padx=20, pady=8)
                 ents[key] = format_var
+            elif key == "protocol":
+                ttk.Label(win, text=label + ":").grid(
+                    row=i, column=0, sticky="w", padx=20, pady=8
+                )
+                combo = ttk.Combobox(
+                    win,
+                    textvariable=protocol_var,
+                    values=["ftp", "sftp"],
+                    state="readonly",
+                    width=53,
+                )
+                combo.grid(row=i, column=1, padx=20, pady=8)
+                ents[key] = protocol_var
+            elif key == "frequency":
+                ttk.Label(win, text=label + ":").grid(
+                    row=i, column=0, sticky="w", padx=20, pady=8
+                )
+                combo = ttk.Combobox(
+                    win,
+                    textvariable=frequency_var,
+                    values=["hourly", "daily"],
+                    state="readonly",
+                    width=53,
+                )
+                combo.grid(row=i, column=1, padx=20, pady=8)
+                ents[key] = frequency_var
             else:
                 ttk.Label(win, text=label + ":").grid(
                     row=i, column=0, sticky="w", padx=20, pady=8
@@ -841,8 +871,6 @@ class FTPSiteGUI:
                 errors.append("Host is required")
             if not data.get("protocol"):
                 errors.append("Protocol is required")
-            elif data["protocol"].lower() not in ["ftp", "sftp"]:
-                errors.append("Protocol must be 'ftp' or 'sftp'")
 
             # Port validation and conversion
             if data.get("port"):
@@ -864,13 +892,6 @@ class FTPSiteGUI:
                     errors.append("Pattern contains invalid strftime codes")
             else:
                 errors.append("Pattern is required")
-
-            # Frequency validation
-            if data.get("frequency") and data["frequency"].lower() not in [
-                "hourly",
-                "daily",
-            ]:
-                errors.append("Frequency must be 'hourly' or 'daily'")
 
             if errors:
                 messagebox.showerror("Validation Error", "\n".join(errors))
