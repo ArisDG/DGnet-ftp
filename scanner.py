@@ -42,7 +42,21 @@ class SiteScanner:
         connector = ConnectorFactory.get(site.protocol)
         remote_files, remote_sizes = connector.list_and_size(site)
         remote_set = set(remote_files)
-        os.makedirs(site.output_dir, exist_ok=True)
+
+        # Ensure output_dir is a valid local path
+        try:
+            os.makedirs(site.output_dir, exist_ok=True)
+        except (OSError, PermissionError) as e:
+            logger.error(
+                f"Cannot create local directory '{site.output_dir}' for {site.name}: {e}"
+            )
+            logger.error(
+                f"Please check that output_dir is a valid LOCAL path, not a remote path"
+            )
+            # Use a fallback directory
+            site.output_dir = f"./downloads/{site.name}"
+            os.makedirs(site.output_dir, exist_ok=True)
+            logger.info(f"Using fallback directory: {site.output_dir}")
 
         now_utc = datetime.datetime.now(timezone.utc)
         results = []

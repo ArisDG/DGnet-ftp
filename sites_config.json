@@ -12,7 +12,7 @@
     "rate": "1s",
     "external_clock": false,
     "use_letter_hour": true,
-    "output_dir": "/home/gpsuser/DGnet-ftp/test/PENT",
+    "output_dir": "./downloads/PENT",
     "station_code": "PENT",
     "format": "Topcon"
   },
@@ -29,7 +29,7 @@
     "rate": "10hz",
     "external_clock": true,
     "use_letter_hour": true,
-    "output_dir": "/home/gpsuser/DGnet-ftp/test/PAT10",
+    "output_dir": "./downloads/PAT10",
     "station_code": "PAT0",
     "format": "Topcon"
   },
@@ -46,7 +46,7 @@
     "rate": "10Hz",
     "external_clock": false,
     "use_letter_hour": false,
-    "output_dir": "/home/gpsuser/DGnet-ftp/test/UPAG-10Hz",
+    "output_dir": "./downloads/UPAG-10Hz",
     "station_code": "UPAG",
     "format": "Trimble"
   },
