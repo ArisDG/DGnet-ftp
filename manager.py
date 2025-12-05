@@ -5,7 +5,7 @@ from models import SiteConfig, MissingFilesLog
 from scanner import SiteScanner
 from connectors import ConnectorFactory
 from config import Config
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +32,7 @@ class FTPSiteManager:
         return log
 
     def auto_download_completed(self, log: MissingFilesLog, delay_minutes: int):
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
         cutoff = now - timedelta(minutes=delay_minutes)
         items = []
         for site_items in log.log.values():
@@ -42,11 +42,16 @@ class FTPSiteManager:
                     "size mismatch",
                 ] and not item.get("is_current_utc"):
                     try:
+                        # Parse dates and ensure they have timezone info
                         if " " in item["date"]:
                             d, t = item["date"].split()
-                            file_dt = datetime.strptime(f"{d} {t}", "%Y-%m-%d %H:%M")
+                            file_dt = datetime.strptime(
+                                f"{d} {t}", "%Y-%m-%d %H:%M"
+                            ).replace(tzinfo=timezone.utc)
                         else:
-                            file_dt = datetime.strptime(item["date"], "%Y-%m-%d")
+                            file_dt = datetime.strptime(
+                                item["date"], "%Y-%m-%d"
+                            ).replace(tzinfo=timezone.utc)
                         if file_dt < cutoff:
                             items.append(item)
                     except Exception as e:
