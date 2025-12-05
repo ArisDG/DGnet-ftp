@@ -434,9 +434,9 @@ class FTPSiteGUI:
 
         def task():
             log = self.manager.scan_all(self.summary_days_var.get())
-            self.full_log = log
 
             def finish():
+                self.full_log = log
                 self._refresh_summary()
                 self.status_var.set("Summary updated – v9.999.9.7 100% ACCURATE")
 
@@ -460,9 +460,9 @@ class FTPSiteGUI:
                 self.root.after(0, lambda m=msg: self.status_var.set(m))
 
             log = self.manager.scan_all(self.days_var.get(), status_callback)
-            self.full_log = log
 
             def finish():
+                self.full_log = log
                 self.scan_btn.config(state="normal")
                 self._filter_only()
                 if auto:

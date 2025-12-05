@@ -58,7 +58,7 @@ class FTPConnector:
     def list_and_size(site):
         ftp = None
         try:
-            port = int(getattr(site, "port", 21))
+            port = site.port
             # Create socket with connect timeout, then use for FTP
             sock = socket.create_connection((site.host, port), timeout=CONNECT_TIMEOUT)
             ftp = ftplib.FTP()
@@ -119,7 +119,7 @@ class FTPConnector:
     def download(site, fname, local_path):
         ftp = None
         try:
-            port = int(getattr(site, "port", 21))
+            port = site.port
             # Create socket with connect timeout, then use for FTP
             sock = socket.create_connection((site.host, port), timeout=CONNECT_TIMEOUT)
             ftp = ftplib.FTP()
@@ -157,7 +157,7 @@ class SFTPConnector:
         transport = None
         sftp = None
         try:
-            port = int(getattr(site, "port", 22))
+            port = site.port
             # Create socket with connect timeout
             sock = socket.create_connection((site.host, port), timeout=CONNECT_TIMEOUT)
             transport = Transport(sock)
@@ -194,7 +194,7 @@ class SFTPConnector:
         transport = None
         sftp = None
         try:
-            port = int(getattr(site, "port", 22))
+            port = site.port
             # Create socket with connect timeout
             sock = socket.create_connection((site.host, port), timeout=CONNECT_TIMEOUT)
             transport = Transport(sock)

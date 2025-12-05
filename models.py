@@ -36,9 +36,9 @@ class SiteConfig:
         self.output_dir = output_dir or f"./downloads/{name}"
         self.station_code = station_code
         self.format = format
-        # Set default port based on protocol if not specified and ensure it's an integer
+        # Set default port based on protocol if not specified
         if port is not None:
-            self.port = int(port) if isinstance(port, str) else port
+            self.port = int(port)
         else:
             self.port = 22 if self.protocol == "sftp" else 21
 
