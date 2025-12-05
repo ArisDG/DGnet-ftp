@@ -47,6 +47,7 @@ class FTPSiteGUI:
         self.scheduler_running = False
         self.scheduler_thread = None
         self.next_run_time = None
+        self.scheduler_lock = threading.Lock()  # Protect scheduler state
         self.missing_text = None
         self.missing_files_data = {}  # Store missing files separately
         self._build_ui()
@@ -621,25 +622,26 @@ class FTPSiteGUI:
         threading.Thread(target=dl, daemon=True).start()
 
     def _toggle_scheduler(self):
-        if not self.scheduler_running:
-            self.scheduler_running = True
-            self.scheduler_btn.config(text="STOP SCHEDULER")
-            self.led.delete("dot")
-            self.led.create_oval(
-                4, 4, 14, 14, fill="lime", outline="green", width=3, tags="dot"
-            )
-            self._schedule_next_run()
-            self.scheduler_thread = threading.Thread(
-                target=self._scheduler_loop, daemon=True
-            )
-            self.scheduler_thread.start()
-            self._scan_and_download(auto=True)
-        else:
-            self.scheduler_running = False
-            self.scheduler_btn.config(text="START SCHEDULER")
-            self.led.delete("dot")
-            self.led.create_oval(4, 4, 14, 14, fill="red", tags="dot")
-            self.scheduler_var.set("Scheduler stopped")
+        with self.scheduler_lock:
+            if not self.scheduler_running:
+                self.scheduler_running = True
+                self.scheduler_btn.config(text="STOP SCHEDULER")
+                self.led.delete("dot")
+                self.led.create_oval(
+                    4, 4, 14, 14, fill="lime", outline="green", width=3, tags="dot"
+                )
+                self._schedule_next_run()
+                self.scheduler_thread = threading.Thread(
+                    target=self._scheduler_loop, daemon=True
+                )
+                self.scheduler_thread.start()
+                self._scan_and_download(auto=True)
+            else:
+                self.scheduler_running = False
+                self.scheduler_btn.config(text="START SCHEDULER")
+                self.led.delete("dot")
+                self.led.create_oval(4, 4, 14, 14, fill="red", tags="dot")
+                self.scheduler_var.set("Scheduler stopped")
 
     def _schedule_next_run(self):
         now = datetime.now()
@@ -650,29 +652,36 @@ class FTPSiteGUI:
         # Ensure next_run_time is always in the future
         if next_hour <= now:
             next_hour += timedelta(hours=1)
-        self.next_run_time = next_hour
-        remaining = int((self.next_run_time - now).total_seconds())
+        with self.scheduler_lock:
+            self.next_run_time = next_hour
+        remaining = int((next_hour - now).total_seconds())
         self.scheduler_var.set(
-            f"Next run: {self.next_run_time.strftime('%H:%M')} (in {self._format_countdown(remaining)})"
+            f"Next run: {next_hour.strftime('%H:%M')} (in {self._format_countdown(remaining)})"
         )
 
     def _scheduler_loop(self):
-        while self.scheduler_running:
+        while True:
+            with self.scheduler_lock:
+                if not self.scheduler_running:
+                    break
+                next_run = self.next_run_time
+
             now = datetime.now()
-            if now >= self.next_run_time:
+            if next_run and now >= next_run:
                 self.root.after(0, lambda: self._scan_and_download(auto=True))
                 self._schedule_next_run()
             else:
                 # Only update countdown if not at run time
-                remaining = int((self.next_run_time - now).total_seconds())
-                if remaining > 0:
-                    # Capture values in local scope to avoid closure issues
-                    next_time_str = self.next_run_time.strftime("%H:%M")
-                    countdown_str = self._format_countdown(remaining)
-                    status_text = f"Next run: {next_time_str} (in {countdown_str})"
-                    self.root.after(
-                        0, lambda msg=status_text: self.scheduler_var.set(msg)
-                    )
+                if next_run:
+                    remaining = int((next_run - now).total_seconds())
+                    if remaining > 0:
+                        # Capture values in local scope to avoid closure issues
+                        next_time_str = next_run.strftime("%H:%M")
+                        countdown_str = self._format_countdown(remaining)
+                        status_text = f"Next run: {next_time_str} (in {countdown_str})"
+                        self.root.after(
+                            0, lambda msg=status_text: self.scheduler_var.set(msg)
+                        )
             time.sleep(1)
 
     def _format_countdown(self, seconds):
