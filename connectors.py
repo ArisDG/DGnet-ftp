@@ -1,18 +1,72 @@
 import ftplib
 import logging
+import socket
+import time
+from functools import wraps
 from paramiko import Transport, SFTPClient
 
 logger = logging.getLogger(__name__)
 
+# Timeout configuration
+CONNECT_TIMEOUT = 10
+READ_TIMEOUT = 30
+DOWNLOAD_TIMEOUT = 60
+
+# Retry configuration
+MAX_RETRIES = 3
+RETRY_DELAY = 1  # seconds
+
+
+def retry_on_network_error(max_retries=MAX_RETRIES):
+    """Decorator to retry operations on transient network errors"""
+
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            last_exception = None
+            for attempt in range(max_retries):
+                try:
+                    return func(*args, **kwargs)
+                except (socket.timeout, socket.error, OSError, EOFError) as e:
+                    last_exception = e
+                    if attempt < max_retries - 1:
+                        delay = RETRY_DELAY * (2**attempt)  # exponential backoff
+                        logger.warning(
+                            f"{func.__name__} attempt {attempt + 1} failed: {e}. Retrying in {delay}s..."
+                        )
+                        time.sleep(delay)
+                    else:
+                        logger.error(
+                            f"{func.__name__} failed after {max_retries} attempts: {e}"
+                        )
+                except Exception as e:
+                    # Non-retryable errors
+                    logger.error(
+                        f"{func.__name__} failed with non-retryable error: {e}"
+                    )
+                    raise
+            raise last_exception
+
+        return wrapper
+
+    return decorator
+
 
 class FTPConnector:
     @staticmethod
+    @retry_on_network_error()
     def list_and_size(site):
         ftp = None
         try:
             port = int(getattr(site, "port", 21))
-            ftp = ftplib.FTP(timeout=30)
-            ftp.connect(site.host, port)
+            # Create socket with connect timeout, then use for FTP
+            sock = socket.create_connection((site.host, port), timeout=CONNECT_TIMEOUT)
+            ftp = ftplib.FTP()
+            ftp.sock = sock
+            ftp.af = sock.family
+            ftp.file = ftp.sock.makefile("r", encoding=ftp.encoding)
+            ftp.welcome = ftp.getresp()
+            ftp.sock.settimeout(READ_TIMEOUT)
             ftp.login(site.user, site.password)
             ftp.cwd(site.path)
             files = []
@@ -61,12 +115,19 @@ class FTPConnector:
                         pass
 
     @staticmethod
+    @retry_on_network_error()
     def download(site, fname, local_path):
         ftp = None
         try:
             port = int(getattr(site, "port", 21))
-            ftp = ftplib.FTP(timeout=60)
-            ftp.connect(site.host, port)
+            # Create socket with connect timeout, then use for FTP
+            sock = socket.create_connection((site.host, port), timeout=CONNECT_TIMEOUT)
+            ftp = ftplib.FTP()
+            ftp.sock = sock
+            ftp.af = sock.family
+            ftp.file = ftp.sock.makefile("r", encoding=ftp.encoding)
+            ftp.welcome = ftp.getresp()
+            ftp.sock.settimeout(DOWNLOAD_TIMEOUT)
             ftp.login(site.user, site.password)
             ftp.cwd(site.path)
             with open(local_path, "wb") as f:
@@ -88,6 +149,7 @@ class FTPConnector:
 
 class SFTPConnector:
     @staticmethod
+    @retry_on_network_error()
     def list_and_size(site):
         if not site.host:
             logger.warning(f"SFTP site {site.name} has no host configured, skipping")
@@ -96,8 +158,12 @@ class SFTPConnector:
         sftp = None
         try:
             port = int(getattr(site, "port", 22))
-            transport = Transport((site.host, port))
-            transport.connect(username=site.user, password=site.password, timeout=30)
+            # Create socket with connect timeout
+            sock = socket.create_connection((site.host, port), timeout=CONNECT_TIMEOUT)
+            transport = Transport(sock)
+            transport.connect(
+                username=site.user, password=site.password, timeout=READ_TIMEOUT
+            )
             sftp = SFTPClient.from_transport(transport)
             sftp.chdir(site.path)
             attrs = sftp.listdir_attr()
@@ -120,6 +186,7 @@ class SFTPConnector:
                     pass
 
     @staticmethod
+    @retry_on_network_error()
     def download(site, fname, local_path):
         if not site.host:
             logger.warning(f"SFTP site {site.name} has no host configured, skipping")
@@ -128,8 +195,12 @@ class SFTPConnector:
         sftp = None
         try:
             port = int(getattr(site, "port", 22))
-            transport = Transport((site.host, port))
-            transport.connect(username=site.user, password=site.password, timeout=60)
+            # Create socket with connect timeout
+            sock = socket.create_connection((site.host, port), timeout=CONNECT_TIMEOUT)
+            transport = Transport(sock)
+            transport.connect(
+                username=site.user, password=site.password, timeout=DOWNLOAD_TIMEOUT
+            )
             sftp = SFTPClient.from_transport(transport)
             remote_path = f"{site.path.rstrip('/')}/{fname}"
             sftp.get(remote_path, local_path)
