@@ -50,6 +50,7 @@ class FTPSiteGUI:
         self.scheduler_thread = None
         self.next_run_time = None
         self.missing_text = None
+        self.missing_files_data = {}  # Store missing files separately
         self._build_ui()
         self._refresh_sites()
 
@@ -323,10 +324,8 @@ class FTPSiteGUI:
         item = self.summary_tree.item(sel[0])
         values = item["values"]
         group = values[0]
-        try:
-            missing_files = values[4]
-        except:
-            missing_files = []
+        # Get missing files from our separate dictionary
+        missing_files = self.missing_files_data.get(sel[0], [])
         if not missing_files:
             self.missing_text.insert(
                 tk.END,
@@ -342,6 +341,7 @@ class FTPSiteGUI:
         self.notebook.select(1)
         for i in self.summary_tree.get_children():
             self.summary_tree.delete(i)
+        self.missing_files_data.clear()  # Clear stored missing files data
         self.missing_text.delete(1.0, tk.END)
         self.missing_text.insert(tk.END, "Building 100% accurate summary...")
 
@@ -421,16 +421,8 @@ class FTPSiteGUI:
                 values=(group, last_str, data["last_file"] or "—", missing_count),
                 tags=(tag,),
             )
-            self.summary_tree.item(
-                iid,
-                values=(
-                    group,
-                    last_str,
-                    data["last_file"] or "—",
-                    missing_count,
-                    missing_files,
-                ),
-            )
+            # Store missing files separately using the iid as key
+            self.missing_files_data[iid] = missing_files
 
         total_missing = sum(len(g["missing"]) for g in groups.values())
         filter_text = f" (filtered: {target_log})" if target_log else ""
@@ -836,6 +828,50 @@ class FTPSiteGUI:
             }
             data["external_clock"] = ext_clk.get()
             data["use_letter_hour"] = letter.get()
+
+            # Validation
+            errors = []
+
+            # Required fields
+            if not data.get("name"):
+                errors.append("Log Name is required")
+            if not data.get("host"):
+                errors.append("Host is required")
+            if not data.get("protocol"):
+                errors.append("Protocol is required")
+            elif data["protocol"].lower() not in ["ftp", "sftp"]:
+                errors.append("Protocol must be 'ftp' or 'sftp'")
+
+            # Port validation
+            if data.get("port"):
+                try:
+                    port = int(data["port"])
+                    if port < 1 or port > 65535:
+                        errors.append("Port must be between 1 and 65535")
+                except ValueError:
+                    errors.append("Port must be a valid number")
+
+            # Pattern validation (basic check for strftime compatibility)
+            if data.get("pattern"):
+                try:
+                    # Test pattern with current date
+                    datetime.now().strftime(data["pattern"])
+                except Exception:
+                    errors.append("Pattern contains invalid strftime codes")
+            else:
+                errors.append("Pattern is required")
+
+            # Frequency validation
+            if data.get("frequency") and data["frequency"].lower() not in [
+                "hourly",
+                "daily",
+            ]:
+                errors.append("Frequency must be 'hourly' or 'daily'")
+
+            if errors:
+                messagebox.showerror("Validation Error", "\n".join(errors))
+                return
+
             try:
                 if site:
                     self.manager.edit_site(idx, **data)
