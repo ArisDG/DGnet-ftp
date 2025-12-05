@@ -22,7 +22,19 @@ class FTPSiteManager:
     ) -> MissingFilesLog:
         log = MissingFilesLog()
         log.clear()
+
+        if not self.sites:
+            logger.warning("No sites configured for scanning")
+            if progress_cb:
+                progress_cb("No sites to scan")
+            return log
+
         for site in self.sites:
+            # Skip sites with invalid configuration
+            if not site.host or not site.protocol:
+                logger.warning(f"Skipping site {site.name}: missing host or protocol")
+                continue
+
             if progress_cb:
                 progress_cb(f"Scanning {site.name} [{site.network} {site.rate}]...")
             items = self.scanner.scan_site(site, days_back)

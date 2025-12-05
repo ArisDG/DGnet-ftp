@@ -87,6 +87,6 @@
     "output_dir": "./downloads/RIO1",
     "station_code": "RIO",
     "format": "Trimble",
-    "port": "22"
+    "port": 22
   }
 ]

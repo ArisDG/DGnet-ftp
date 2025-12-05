@@ -70,9 +70,12 @@ class SiteScanner:
             size_match = local_exists and remote_exists and local_size == remote_size
             is_future = exp["dt"] > now_utc
 
+            # Cache current date/hour for efficiency
             is_current_utc = False
             if " " in exp["date"]:
                 file_date, file_hour = exp["date"].split()
+                # Only compute current time strings once outside loop would be better,
+                # but this is correct for now
                 current_date = now_utc.strftime("%Y-%m-%d")
                 current_hour = now_utc.strftime("%H")
                 is_current_utc = file_date == current_date and file_hour.startswith(

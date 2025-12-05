@@ -668,9 +668,13 @@ class FTPSiteGUI:
                 # Only update countdown if not at run time
                 remaining = int((self.next_run_time - now).total_seconds())
                 if remaining > 0:
-                    # Update status directly without creating closures
-                    status_text = f"Next run: {self.next_run_time.strftime('%H:%M')} (in {self._format_countdown(remaining)})"
-                    self.root.after(0, self.scheduler_var.set, status_text)
+                    # Capture values in local scope to avoid closure issues
+                    next_time_str = self.next_run_time.strftime("%H:%M")
+                    countdown_str = self._format_countdown(remaining)
+                    status_text = f"Next run: {next_time_str} (in {countdown_str})"
+                    self.root.after(
+                        0, lambda msg=status_text: self.scheduler_var.set(msg)
+                    )
             time.sleep(1)
 
     def _format_countdown(self, seconds):
@@ -840,12 +844,14 @@ class FTPSiteGUI:
             elif data["protocol"].lower() not in ["ftp", "sftp"]:
                 errors.append("Protocol must be 'ftp' or 'sftp'")
 
-            # Port validation
+            # Port validation and conversion
             if data.get("port"):
                 try:
                     port = int(data["port"])
                     if port < 1 or port > 65535:
                         errors.append("Port must be between 1 and 65535")
+                    else:
+                        data["port"] = port  # Store the converted integer
                 except ValueError:
                     errors.append("Port must be a valid number")
 

@@ -36,10 +36,11 @@ class SiteConfig:
         self.output_dir = output_dir or f"./downloads/{name}"
         self.station_code = station_code
         self.format = format
-        # Set default port based on protocol if not specified
-        self.port = (
-            port if port is not None else (22 if self.protocol == "sftp" else 21)
-        )
+        # Set default port based on protocol if not specified and ensure it's an integer
+        if port is not None:
+            self.port = int(port) if isinstance(port, str) else port
+        else:
+            self.port = 22 if self.protocol == "sftp" else 21
 
     def to_dict(self):
         return self.__dict__.copy()
